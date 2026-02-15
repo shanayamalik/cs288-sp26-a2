@@ -703,9 +703,13 @@ class TransformerBlock(nn.Module):
         Returns:
             Output tensor of shape (batch, seq_len, d_model)
         """
-        # TODO: Implement Transformer block forward pass
+        # apply self-attention with residual connection  
+        x = x + self.attn(self.ln1(x), token_positions)
         
-        raise NotImplementedError("Implement TransformerBlock.forward")
+        # apply feed-forward network with residual connection 
+        x = x + self.ffn(self.ln2(x))
+        
+        return x
 
 
 # =============================================================================
