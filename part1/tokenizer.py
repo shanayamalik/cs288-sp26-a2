@@ -1,3 +1,6 @@
+# TODO: Confirm if it's okay that I'm on macOS and 2 memory tests are skipping 
+# with 'rlimit support for non-linux systems is spotty.' 
+# The skip decorators are in the starter code. 
 """
 BPE Tokenizer implementation compatible with GPT-2 / tiktoken.
 """
@@ -75,16 +78,58 @@ class Tokenizer:
                b. Merge all occurrences of that pair
             3. Return final token list
         """
-        # Start with individual bytes
+        # start with individual bytes as tokens
         tokens = [bytes([b]) for b in token_bytes]
         
         if len(tokens) <= 1:
             return tokens
         
-        # TODO: Implement BPE algorithm
-        # Return tokens
+        # keep merging until no more pairs can be merged
+        while True:
+            # get all adjacent pairs in current token list
+            pairs = self._get_pairs(tokens)
+            
+            # if no pairs left, we're done
+            if not pairs:
+                break
+            
+            # find the pair with the lowest rank (token ID) in vocab
+            # lower ID = merged earlier in training = higher priority
+            best_pair = None
+            best_rank = float('inf')
+            
+            for pair in pairs:
+                # the merged result of this pair
+                merged = pair[0] + pair[1]
+                # check if this merged token exists in our vocab
+                if merged in self.inverse_vocab:
+                    rank = self.inverse_vocab[merged]
+                    # keep track of the pair with lowest rank
+                    if rank < best_rank:
+                        best_rank = rank
+                        best_pair = pair
+            
+            if best_pair is None:
+                break
+            
+            # merge all occurrences of best_pair in the token list
+            first, second = best_pair
+            new_tokens = []
+            i = 0
+            while i < len(tokens):
+                # check if we can merge at this position
+                if i < len(tokens) - 1 and tokens[i] == first and tokens[i + 1] == second:
+                    # merge this pair
+                    new_tokens.append(first + second)
+                    i += 2
+                else:
+                    # keep this token as-is
+                    new_tokens.append(tokens[i])
+                    i += 1
+            
+            tokens = new_tokens
         
-        raise NotImplementedError("Implement _bpe")
+        return tokens
 
     def _split_with_special_tokens(self, text: str) -> list[tuple[str, bool]]:
         """
@@ -139,9 +184,29 @@ class Tokenizer:
             return []
         
         ids = []
-        # TODO: Implement encoding
         
-        raise NotImplementedError("Implement _encode_chunk")
+        # use regex pattern to split text into pre-tokens (words, numbers, etc.)
+        for match in self.pat.finditer(text):
+            pre_token = match.group()
+            
+            # convert pre-token to bytes 
+            # and apply BPE to get list of merged byte sequences
+            token_bytes = pre_token.encode("utf-8")
+            bpe_tokens = self._bpe(token_bytes)
+            
+            # convert each byte sequence to token ID
+            for bpe_token in bpe_tokens:
+                if bpe_token in self.inverse_vocab:
+                    # token exists in vocab, use its ID
+                    ids.append(self.inverse_vocab[bpe_token])
+                else:
+                    # unknown token, fall back to individual bytes
+                    for byte_val in bpe_token:
+                        single_byte = bytes([byte_val])
+                        if single_byte in self.inverse_vocab:
+                            ids.append(self.inverse_vocab[single_byte])
+        
+        return ids
 
     def encode(self, text: str) -> list[int]:
         """
@@ -189,9 +254,15 @@ class Tokenizer:
         if not ids:
             return ""
         
-        # TODO: Implement decoding
+        # collect all bytes from each token ID
+        all_bytes = b""
+        for token_id in ids:
+            if token_id in self.vocab:
+                # look up the bytes for this token ID
+                all_bytes += self.vocab[token_id]
         
-        raise NotImplementedError("Implement decode")
+        # decode the concatenated bytes as UTF-8
+        return all_bytes.decode("utf-8", errors="replace")
 
     def encode_iterable(self, iterable: Iterator[str]) -> Iterator[int]:
         """
