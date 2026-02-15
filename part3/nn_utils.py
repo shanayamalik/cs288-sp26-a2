@@ -92,9 +92,21 @@ def token_accuracy(logits: Tensor, targets: Tensor, ignore_index: int = -100) ->
         >>> token_accuracy(logits, targets)
         tensor(0.6667)  # 2 out of 3 correct
     """
-    # TODO: Implement token accuracy
+    # get predicted tokens by taking argmax over vocabulary dimension
+    predictions = torch.argmax(logits, dim=-1)
     
-    raise NotImplementedError("Implement token_accuracy")
+    # create mask for valid targets and filter to valid positions
+    mask = targets != ignore_index
+    valid_predictions = predictions[mask]
+    valid_targets = targets[mask]
+    
+    # no valid targets return 0 
+    if valid_targets.numel() == 0:
+        return torch.tensor(0.0, device=logits.device)
+    
+    # compute accuracy as fraction of correct predictions
+    correct = (valid_predictions == valid_targets).float()
+    return correct.mean()
 
 
 def perplexity(logits: Tensor, targets: Tensor, ignore_index: int = -100) -> Tensor:
