@@ -144,9 +144,12 @@ class RMSNorm(nn.Module):
         Returns:
             Normalized tensor of same shape
         """
-        # TODO: Implement RMS normalization
+        # compute root mean square along last dimension and average over it mean(..., keepdim=True)
+        # add eps for numerical stability (avoid division by zero)
+        rms = torch.sqrt(torch.mean(x ** 2, dim=-1, keepdim=True) + self.eps)
         
-        raise NotImplementedError("Implement RMSNorm.forward")
+        # normalize by dividing by RMS, then scale by learnable weight
+        return x / rms * self.weight
 
 
 # =============================================================================
