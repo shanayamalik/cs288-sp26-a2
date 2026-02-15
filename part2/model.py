@@ -540,9 +540,25 @@ class MultiHeadSelfAttention(nn.Module):
         """
         batch_size, seq_len, _ = x.shape
         
-        # TODO: Implement multi-head self-attention
+        # project input to queries, keys, and values
+        Q = self.q_proj(x)   
+        K = self.k_proj(x)   
+        V = self.v_proj(x)   
         
-        raise NotImplementedError("Implement MultiHeadSelfAttention.forward")
+        # reshape to separate heads from (batch, seq_len, d_model) to (batch, num_heads, seq_len, d_k)
+        Q = Q.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        K = K.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        V = V.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        
+        # create causal mask for autoregressive attention
+        mask = self._create_causal_mask(seq_len, x.device)  
+        
+        # apply scaled dot-product attention
+        attn_output = scaled_dot_product_attention(Q, K, V, mask)  
+        
+        # reshape back and apply output projection
+        attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        return self.output_proj(attn_output)
 
 
 class MultiHeadSelfAttentionWithRoPE(nn.Module):
