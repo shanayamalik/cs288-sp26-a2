@@ -77,7 +77,8 @@ class Embedding(nn.Module):
         self.vocab_size = vocab_size
         self.d_model = d_model
         # Embedding weight matrix of shape (vocab_size, d_model)
-        # TODO: Implement embedding
+        # each row represents the embedding vector for a token
+        self.weight = nn.Parameter(torch.empty(vocab_size, d_model))
         self._init_weights()
     
     def _init_weights(self):
@@ -94,9 +95,11 @@ class Embedding(nn.Module):
         Returns:
             Tensor of embeddings of shape (batch, seq_len, d_model)
         """
-        # TODO: Implement embedding lookup
-        
-        raise NotImplementedError("Implement Embedding.forward")
+        # index into weight matrix to get embeddings
+        # token_ids: (batch, seq_len) contains indices in [0, vocab_size)
+        # self.weight: (vocab_size, d_model)
+        # result: (batch, seq_len, d_model)
+        return self.weight[token_ids]
 
 
 # =============================================================================
