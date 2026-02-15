@@ -17,10 +17,11 @@ def softmax(x: Tensor, dim: int = -1) -> Tensor:
     Returns:
         Tensor of same shape as input with softmax applied along dim
     """
-    # TODO: Implement numerically stable softmax. You can re-use the same one 
-    # used in part 2. But for this problem, you need to implement a numerically stable version to pass harder tests.
-    
-    raise NotImplementedError("Implement softmax")
+    # subtract max for numerical stability to avoid overflow
+    max_vals = torch.max(x, dim=dim, keepdim=True).values
+    exp_x = torch.exp(x - max_vals)
+    # normalize by sum to get probabilities
+    return exp_x / torch.sum(exp_x, dim=dim, keepdim=True)
 
 
 def cross_entropy(logits: Tensor, targets: Tensor) -> Tensor:
