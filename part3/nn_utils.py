@@ -127,6 +127,19 @@ def perplexity(logits: Tensor, targets: Tensor, ignore_index: int = -100) -> Ten
         >>> perplexity(logits, targets)
         tensor(3.)  # Equal to vocab_size (worst case for uniform)
     """
-    # TODO: Implement perplexity
+    # create mask for valid targets (not equal to ignore_index)
+    mask = targets != ignore_index
     
-    raise NotImplementedError("Implement perplexity")
+    # filter logits and targets to only valid positions
+    valid_logits = logits[mask]
+    valid_targets = targets[mask]
+    
+    # compute cross entropy on valid positions only
+    if valid_targets.numel() == 0:
+        # if no valid targets, return perplexity of 1 (no uncertainty)
+        return torch.tensor(1.0, device=logits.device)
+    
+    ce_loss = cross_entropy(valid_logits, valid_targets)
+    
+    # perplexity is exp of cross entropy
+    return torch.exp(ce_loss)
