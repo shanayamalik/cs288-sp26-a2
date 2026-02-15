@@ -317,7 +317,9 @@ class RotaryPositionEmbedding(nn.Module):
         
         # Precompute frequencies
         # inv_freq shape: (d_model // 2,)
-        # TODO: Implement inv_freq
+        # compute inverse frequencies: θ_i = 1 / (theta ^ (2i / d_model))
+        # for dimension pairs i=0,1,2,...,(d_model//2)-1
+        inv_freq = 1.0 / (theta ** (torch.arange(0, d_model, 2).float() / d_model))
         self.register_buffer("inv_freq", inv_freq)
         
         # Precompute cos and sin for all positions
@@ -363,9 +365,11 @@ class RotaryPositionEmbedding(nn.Module):
             x1, x2 = x[..., :x.shape[-1]//2], x[..., x.shape[-1]//2:]
             return torch.cat([-x2, x1], dim=-1)
         """
-        # TODO: Implement rotate_half
-        
-        raise NotImplementedError("Implement _rotate_half")
+        # split x into two halves along the last dimension
+        x1 = x[..., :x.shape[-1] // 2]
+        x2 = x[..., x.shape[-1] // 2:]
+        # concatenate negated second half with first half
+        return torch.cat([-x2, x1], dim=-1)
     
     def forward(self, x: Tensor, token_positions: Tensor) -> Tensor:
         """
@@ -403,9 +407,18 @@ class RotaryPositionEmbedding(nn.Module):
             
             x_rotated = x * cos + rotate_half(x) * sin  # (2, 8, 10, 64)
         """
-        # TODO: Implement RoPE forward pass
+        # index into precomputed cos/sin using token_positions
+        cos = self.cos_cached[token_positions]  
+        sin = self.sin_cached[token_positions]  
         
-        raise NotImplementedError("Implement RotaryPositionEmbedding.forward")
+        # if x has 4 dimensions (batch, heads, seq, d_k), expand cos/sin to broadcast over heads
+        if x.ndim == 4:
+            # unsqueeze at dim 1 to add heads dimension 
+            cos = cos.unsqueeze(1)
+            sin = sin.unsqueeze(1)
+        
+        # apply rotation formula 
+        return x * cos + self._rotate_half(x) * sin
 
 
 def apply_rope(x: Tensor, d_model: int, theta: float, max_seq_len: int, token_positions: Tensor) -> Tensor:
