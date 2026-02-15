@@ -36,9 +36,17 @@ def cross_entropy(logits: Tensor, targets: Tensor) -> Tensor:
     Returns:
         Scalar tensor containing the mean cross-entropy loss
     """
-    # TODO: Implement cross-entropy loss
+    # log(softmax(x)) = x - log(sum(exp(x))) = x - max(x) - log(sum(exp(x - max(x))))
+    max_logits = torch.max(logits, dim=-1, keepdim=True).values
+    log_sum_exp = torch.log(torch.sum(torch.exp(logits - max_logits), dim=-1, keepdim=True))
+    log_probs = logits - max_logits - log_sum_exp
     
-    raise NotImplementedError("Implement cross_entropy")
+    # gather the log probabilities of the correct classes
+    n = logits.shape[0]
+    correct_log_probs = log_probs[torch.arange(n), targets]
+    
+    # cross entropy is negative log likelihood, return mean
+    return -correct_log_probs.mean()
 
 
 def gradient_clipping(parameters, max_norm: float) -> Tensor:
