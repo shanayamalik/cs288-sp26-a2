@@ -791,9 +791,18 @@ class TransformerLM(nn.Module):
         if token_positions is None:
             token_positions = torch.arange(seq_len, device=token_ids.device).unsqueeze(0).expand(batch_size, -1)
         
-        # TODO: Implement TransformerLM forward pass
+        # embed token ids to get input embeddings
+        x = self.token_embeddings(token_ids)   
         
-        raise NotImplementedError("Implement TransformerLM.forward")
+        # pass through all transformer blocks
+        for layer in self.layers:
+            x = layer(x, token_positions)   
+        
+        # apply final layer normalization and project to vocabulary size to get logits
+        x = self.final_ln(x)   
+        logits = self.output(x)   
+        
+        return logits
     
     def load_weights(self, state_dict: dict):
         """
