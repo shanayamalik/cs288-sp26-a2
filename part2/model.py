@@ -620,9 +620,31 @@ class MultiHeadSelfAttentionWithRoPE(nn.Module):
         if token_positions is None:
             token_positions = torch.arange(seq_len, device=x.device).unsqueeze(0).expand(batch_size, -1)
         
-        # TODO: Implement multi-head self-attention with RoPE
+        # project input to queries, keys, and values
+        Q = self.q_proj(x)  # (batch, seq_len, d_model)
+        K = self.k_proj(x)  # (batch, seq_len, d_model)
+        V = self.v_proj(x)  # (batch, seq_len, d_model)
         
-        raise NotImplementedError("Implement MultiHeadSelfAttentionWithRoPE.forward")
+        # reshape to separate heads: (batch, seq_len, d_model) -> (batch, num_heads, seq_len, d_k)
+        Q = Q.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        K = K.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        V = V.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        
+        # apply rotary position embedding to queries and keys (not values!)
+        Q = self.rope(Q, token_positions)  # (batch, num_heads, seq_len, d_k)
+        K = self.rope(K, token_positions)  # (batch, num_heads, seq_len, d_k)
+        
+        # create causal mask for autoregressive attention
+        mask = self._create_causal_mask(seq_len, x.device)  # (seq_len, seq_len)
+        
+        # apply scaled dot-product attention
+        attn_output = scaled_dot_product_attention(Q, K, V, mask)  # (batch, num_heads, seq_len, d_k)
+        
+        # reshape back: (batch, num_heads, seq_len, d_k) -> (batch, seq_len, d_model)
+        attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        
+        # apply output projection
+        return self.output_proj(attn_output)
 
 
 # =============================================================================
