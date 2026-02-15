@@ -186,9 +186,9 @@ def silu(x: Tensor) -> Tensor:
     Returns:
         Tensor with SiLU applied element-wise
     """
-    # TODO: Implement SiLU activation
-    
-    raise NotImplementedError("Implement silu")
+    # silu(x) = x * sigmoid(x)
+    # element-wise multiplication of x with its sigmoid
+    return x * torch.sigmoid(x)
 
 
 # =============================================================================
@@ -232,9 +232,11 @@ class SwiGLU(nn.Module):
         Returns:
             Output tensor of shape (..., d_model)
         """
-        # TODO: Implement SwiGLU
-        
-        raise NotImplementedError("Implement SwiGLU.forward")
+        # swiglu combines gating with silu activation
+        # gate: apply w1 and silu activation
+        # value: apply w3 (standard linear projection)
+        # multiply gate and value element-wise, then project down with w2
+        return self.w2(silu(self.w1(x)) * self.w3(x))
 
 
 # =============================================================================
