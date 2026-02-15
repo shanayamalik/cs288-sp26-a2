@@ -50,9 +50,10 @@ class Linear(nn.Module):
         Returns:
             Output tensor of shape (..., d_out)
         """
-        # TODO: Implement linear transformation
-        
-        raise NotImplementedError("Implement Linear.forward")
+        # multiply input by weight transpose
+        # x: (..., d_in), weight: (d_out, d_in), weight.T: (d_in, d_out)
+        # result: (..., d_out)
+        return x @ self.weight.T
 
 
 # =============================================================================
