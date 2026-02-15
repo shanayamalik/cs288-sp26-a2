@@ -454,9 +454,25 @@ def scaled_dot_product_attention(
     """
     d_k = Q.shape[-1]
     
-    # TODO: Implement scaled dot-product attention
+    # compute attention scores: Q @ K^T / sqrt(d_k)
+    scores = (Q @ K.transpose(-2, -1)) / math.sqrt(d_k)
     
-    raise NotImplementedError("Implement scaled_dot_product_attention")
+    # apply mask if provided (set False positions to -inf before softmax)
+    if mask is not None:
+        scores = scores.masked_fill(~mask, float('-inf'))
+    
+    # apply softmax to get attention weights
+    attention_weights = softmax(scores, dim=-1)
+    
+    # handle NaN from fully masked positions by replacing them with zeros
+    attention_weights = torch.where(
+        torch.isnan(attention_weights),
+        torch.zeros_like(attention_weights),
+        attention_weights
+    )
+    
+    # multiply attention weights by values  
+    return attention_weights @ V
 
 
 # =============================================================================
