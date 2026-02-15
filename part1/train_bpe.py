@@ -193,6 +193,86 @@ def train_bpe(
         for i in range(2, len(special_bytes) + 1):
             forbidden_substrings.add(special_bytes[:i])
     
-    # TODO: Implement BPE training
+    # initialize vocab with special tokens first, then all 256 bytes
+    vocab = {}
+    token_id = 0
     
-    raise NotImplementedError("Implement train_bpe")
+    # add special tokens first (they get the lowest IDs)
+    for special in special_tokens:
+        vocab[token_id] = special.encode("utf-8")
+        token_id += 1
+    
+    # add all 256 single-byte tokens
+    for byte_val in range(256):
+        vocab[token_id] = bytes([byte_val])
+        token_id += 1
+    
+    # pre-tokenize corpus and build word frequency counts
+    word_freqs = Counter()
+    
+    # pre-tokenize the text into chunks using GPT-2 pattern
+    for pre_token in pre_tokenize(text, special_tokens):
+        # convert the pre-token to bytes
+        token_bytes = pre_token.encode("utf-8")
+        
+        # check if this word contains any forbidden substrings
+        contains_forbidden = False
+        for i in range(len(token_bytes)):
+            for j in range(i + 2, len(token_bytes) + 1):
+                if token_bytes[i:j] in forbidden_substrings:
+                    contains_forbidden = True
+                    break
+            if contains_forbidden:
+                break
+        
+        # skip words with forbidden substrings
+        if contains_forbidden:
+            continue
+        
+        # represent word as tuple of single bytes (initial tokens)
+        word = tuple(bytes([b]) for b in token_bytes)
+        word_freqs[word] += 1
+    
+    # count pair frequencies across all words
+    def count_pairs(word_freqs):
+        pair_counts = Counter()
+        for word, freq in word_freqs.items():
+            # get all adjacent pairs in this word
+            pairs = get_pairs(word)
+            # add frequency for each pair
+            for pair in pairs:
+                pair_counts[pair] += freq
+        return pair_counts
+    
+    merges = []
+    
+    while len(vocab) < vocab_size:
+        # count all current pair frequencies
+        pair_counts = count_pairs(word_freqs)
+        if not pair_counts:
+            break
+        
+        # find the most frequent pair
+        # for ties, use lexicographically smallest pair (deterministic)
+        best_pair = max(pair_counts, key=lambda p: (pair_counts[p], p))
+        
+        # create the merged token by concatenating the pair
+        first, second = best_pair
+        merged_token = first + second
+        
+        # add merged token to vocab with next available ID
+        vocab[token_id] = merged_token
+        token_id += 1
+        
+        merges.append(best_pair)
+        
+        # update word representations by applying this merge 
+        # and merge all occurrences of best_pair in each word
+        new_word_freqs = Counter()
+        for word, freq in word_freqs.items():
+            new_word = merge_word(word, best_pair)
+            new_word_freqs[new_word] = freq
+        
+        word_freqs = new_word_freqs
+    
+    return vocab, merges
