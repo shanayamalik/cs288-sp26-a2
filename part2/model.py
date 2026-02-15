@@ -894,9 +894,24 @@ def count_flops_per_token(
     Returns:
         Approximate FLOPs per token
     """
-    # TODO: Implement FLOPs counting
+    flops = 0
     
-    raise NotImplementedError("Implement count_flops_per_token")
+    for _ in range(num_layers):
+        # attention: q,k,v projections + qk^t + attn@v + output projection
+        flops += 3 * 2 * d_model * d_model   
+        flops += 2 * context_length * d_model   
+        flops += 2 * context_length * d_model   
+        flops += 2 * d_model * d_model  
+        
+        # ffn: w1, w2, w3 for swiglu
+        flops += 2 * d_model * d_ff   
+        flops += 2 * d_ff * d_model   
+        flops += 2 * d_model * d_ff   
+    
+    # final output projection
+    flops += 2 * d_model * vocab_size
+    
+    return flops
 
 
 def estimate_memory_bytes(
@@ -919,6 +934,16 @@ def estimate_memory_bytes(
     Returns:
         Approximate memory in bytes
     """
-    # TODO: Implement memory estimation
+    params = 0
     
-    raise NotImplementedError("Implement estimate_memory_bytes")
+    # embeddings and output
+    params += vocab_size * d_model  # token embeddings
+    params += vocab_size * d_model  # output projection
+    params += d_model  # final layer norm
+    
+    for _ in range(num_layers):
+        params += 2 * d_model  # ln1, ln2
+        params += 4 * d_model * d_model  # q,k,v,output projections
+        params += 3 * d_model * d_ff  # w1,w2,w3 in swiglu
+    
+    return params * dtype_bytes
