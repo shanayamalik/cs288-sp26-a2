@@ -167,9 +167,15 @@ def softmax(x: Tensor, dim: int = -1) -> Tensor:
     Returns:
         Tensor of same shape as input with softmax applied along dim
     """
-    # TODO: Implement numerically stable softmax
+    # subtract max before exp to avoid overflow
+    # max values along dim, keep dimensions for broadcasting
+    max_vals = torch.max(x, dim=dim, keepdim=True).values
     
-    raise NotImplementedError("Implement softmax")
+    # subtract max and compute exp
+    exp_x = torch.exp(x - max_vals)
+    
+    # normalize by sum to get probabilities
+    return exp_x / torch.sum(exp_x, dim=dim, keepdim=True)
 
 # =============================================================================
 # SiLU activation (helper for SwiGLU)
@@ -233,9 +239,7 @@ class SwiGLU(nn.Module):
             Output tensor of shape (..., d_model)
         """
         # swiglu combines gating with silu activation
-        # gate: apply w1 and silu activation
-        # value: apply w3 (standard linear projection)
-        # multiply gate and value element-wise, then project down with w2
+        # multiply gate (apply w1 and silu activation) and value (apply w3) element-wise, then project down with w2
         return self.w2(silu(self.w1(x)) * self.w3(x))
 
 
