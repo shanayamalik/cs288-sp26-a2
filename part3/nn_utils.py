@@ -60,9 +60,27 @@ def gradient_clipping(parameters, max_norm: float) -> Tensor:
     Returns:
         The total norm of the gradients before clipping
     """
-    # TODO: Implement gradient clipping
+    # collect all gradients from parameters that have them
+    grads = []
+    for param in parameters:
+        if param.grad is not None:
+            grads.append(param.grad)
     
-    raise NotImplementedError("Implement gradient_clipping")
+    if len(grads) == 0:
+        return torch.tensor(0.0)
+    
+    # compute global L2 norm across all gradients
+    # total_norm = sqrt(sum of all ||grad_i||^2)
+    total_norm = torch.sqrt(sum(torch.sum(grad ** 2) for grad in grads))
+    
+    # compute clipping coefficient and only clip if total_norm exceeds max_norm
+    clip_coef = max_norm / (total_norm + 1e-6)
+    clip_coef = torch.clamp(clip_coef, max=1.0)
+    
+    for grad in grads:
+        grad.mul_(clip_coef)
+    
+    return total_norm
 
 
 def token_accuracy(logits: Tensor, targets: Tensor, ignore_index: int = -100) -> Tensor:
