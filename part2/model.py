@@ -621,18 +621,18 @@ class MultiHeadSelfAttentionWithRoPE(nn.Module):
             token_positions = torch.arange(seq_len, device=x.device).unsqueeze(0).expand(batch_size, -1)
         
         # project input to queries, keys, and values
-        Q = self.q_proj(x)  # (batch, seq_len, d_model)
-        K = self.k_proj(x)  # (batch, seq_len, d_model)
-        V = self.v_proj(x)  # (batch, seq_len, d_model)
+        Q = self.q_proj(x) 
+        K = self.k_proj(x)  
+        V = self.v_proj(x) 
         
         # reshape to separate heads: (batch, seq_len, d_model) -> (batch, num_heads, seq_len, d_k)
         Q = Q.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
         K = K.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
         V = V.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
         
-        # apply rotary position embedding to queries and keys (not values!)
-        Q = self.rope(Q, token_positions)  # (batch, num_heads, seq_len, d_k)
-        K = self.rope(K, token_positions)  # (batch, num_heads, seq_len, d_k)
+        # apply rotary position embedding to queries and keys 
+        Q = self.rope(Q, token_positions)  
+        K = self.rope(K, token_positions) 
         
         # create causal mask for autoregressive attention
         mask = self._create_causal_mask(seq_len, x.device)  # (seq_len, seq_len)
