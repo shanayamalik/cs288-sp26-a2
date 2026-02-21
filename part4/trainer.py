@@ -67,7 +67,7 @@ class Trainer:
         self.model.train()
         total_loss = 0.0
         num_batches = 0
-        for batch in self.train_dataloader:
+        for i, batch in enumerate(self.train_dataloader):
             self.optimizer.zero_grad()
             loss = self.compute_loss_fn(batch, self.model)
             loss.backward()
@@ -77,6 +77,11 @@ class Trainer:
             total_loss += loss.item()
             num_batches += 1
             self.global_step += 1
+            
+            # Log progress
+            if self.config.log_interval > 0 and (i + 1) % self.config.log_interval == 0:
+                avg_loss = total_loss / num_batches
+                print(f"  Batch {i+1}/{len(self.train_dataloader)} | Loss: {avg_loss:.4f}")
         return total_loss / num_batches if num_batches > 0 else 0.0
     
     @torch.no_grad()
@@ -94,11 +99,16 @@ class Trainer:
     
     def train(self) -> Dict[str, Any]:
         for epoch in range(self.config.num_epochs):
+            print(f"\nEpoch {epoch+1}/{self.config.num_epochs}")
+            print("-" * 40)
             train_loss = self.train_epoch()
             self.train_losses.append(train_loss)
+            print(f"  ✅ Epoch {epoch+1} avg loss: {train_loss:.4f}")
+            
             if self.val_dataloader:
                 val_loss = self.evaluate()
                 self.val_losses.append(val_loss)
+                print(f"  📊 Validation loss: {val_loss:.4f}")
         return {"train_losses": self.train_losses, "val_losses": self.val_losses}
 
 
