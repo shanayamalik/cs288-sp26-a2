@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Output files
+output/
+outputs/
+part4/outputs/
+*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large datasets (download these separately)
+part1/fixtures/tinystories_full.txt
+part1/fixtures/tinystories_100k.txt
+part4/fixtures/tinystories_*.txt
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+
+# PDFs (optional - uncomment if you don't want to push)
+# *.pdf
